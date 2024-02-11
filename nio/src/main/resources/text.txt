@@ -1,0 +1,5 @@
+Simple text file: several languages and symbols (e.g. ~!@#$%^&*)
+    Обычный текстовый файл №1 - видно ли букву Ё?
+Çok teşekkür ederim!
+
+ESPAÑOL ;/
