@@ -14,11 +14,14 @@ public class FileError {
     private Throwable cause;
 
     public enum FileErrorType {
+        CREATE_ERROR,
+        EXIST_ERROR,
         OPEN_ERROR,
-        COPY_ERROR,
         READ_ERROR,
+        HASH_ERROR,
         WRITE_ERROR,
-        INTEGRITY_ERROR,
+        COPY_ERROR,
+        COPY_INTEGRITY_ERROR,
         RETRY_WAITING_ERROR,
         MOVE_ERROR
     }

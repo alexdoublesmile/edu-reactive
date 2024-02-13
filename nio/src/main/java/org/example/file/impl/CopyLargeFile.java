@@ -1,7 +1,11 @@
 package org.example.file.impl;
 
 import org.example.file.CopyAction;
+import org.example.file.FileError;
 import org.example.file.FileService;
+
+import java.util.List;
+import java.util.Map;
 
 public class CopyLargeFile implements CopyAction {
     private static final long DEFAULT_BUFFER_SIZE = 128 * 1024 * 1024;
@@ -32,10 +36,15 @@ public class CopyLargeFile implements CopyAction {
 
     @Override
     public void execute(String source, String target) {
+
+    }
+
+    @Override
+    public void execute(String source, String target, Map<String, List<FileError>> exceptionInfo) {
         copyLargeFile(source, target, bufferSize, isSafe, withProgress);
     }
 
     public static void copyLargeFile(String source, String target, long bufferSize, boolean isSafe, boolean withProgress) {
-        FileService.copyLargeFile(source, target, bufferSize, isSafe, withProgress);
+//        FileService.copyLargeFile(source, target, bufferSize, isSafe, withProgress);
     }
 }

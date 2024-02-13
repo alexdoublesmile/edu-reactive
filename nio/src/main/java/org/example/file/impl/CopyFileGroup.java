@@ -1,6 +1,25 @@
 package org.example.file.impl;
 
 import org.example.file.CopyAction;
+import org.example.file.FileError;
+import org.example.file.FileService;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousFileChannel;
+import java.nio.channels.CompletionHandler;
+import java.nio.file.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
+import static java.lang.String.format;
+import static java.time.Instant.now;
+import static org.example.file.FileError.FileErrorType.COPY_ERROR;
+import static org.example.file.FileError.FileErrorType.EXIST_ERROR;
 
 public class CopyFileGroup implements CopyAction {
     @Override
@@ -8,8 +27,15 @@ public class CopyFileGroup implements CopyAction {
 
     }
 
-    // make java function as an example of copying file by NIO
-    // make a java code example of such Concurrent file operations (make analog of your previous example but for multiple files concurrent operations)
+    @Override
+    public void execute(String source, String target, Map<String, List<FileError>> exceptionInfo) {
+
+    }
+
+
+    // make a java code high-performance and production-ready example of copying many files by NIO concurrently
+
+
 //    public static void copyFiles(String sourceDir, String targetDir, int bufferSize) throws IOException {
 //        // Use a selector for non-blocking I/O
 //        Selector selector = Selector.open();
