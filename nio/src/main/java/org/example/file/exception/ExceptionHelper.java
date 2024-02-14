@@ -1,7 +1,5 @@
 package org.example.file.exception;
 
-import org.example.file.FileError;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -17,11 +15,15 @@ public final class ExceptionHelper {
             Map<String, List<FileError>> exceptionInfo
     ) {
         System.err.println(message);
-        exceptionInfo.getOrDefault(key, new ArrayList<>()).add(FileError.builder()
+        final FileError error = FileError.builder()
                 .type(errorType)
                 .message(message)
                 .timestamp(now())
                 .cause(ex)
-                .build());
+                .build();
+
+        exceptionInfo.getOrDefault(key,
+                exceptionInfo.put(key, new ArrayList<>()))
+                .add(error);
     }
 }

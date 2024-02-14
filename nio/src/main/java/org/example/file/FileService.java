@@ -1,8 +1,9 @@
 package org.example.file;
 
 import org.apache.commons.codec.digest.DigestUtils;
+import org.example.file.exception.FileError;
+import org.example.file.exception.QuarantineService;
 
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -21,13 +22,17 @@ import java.util.concurrent.TimeUnit;
 
 import static java.lang.String.format;
 import static java.nio.channels.FileChannel.open;
+import static java.nio.file.Files.exists;
+import static java.nio.file.Files.isDirectory;
 import static java.nio.file.Path.of;
 import static java.nio.file.StandardOpenOption.*;
-import static java.time.Instant.now;
 import static org.example.file.FileConstants.DEFAULT_BUFFER_SIZE;
 import static org.example.file.FileConstants.DEFAULT_QUARANTINE_PATH;
-import static org.example.file.FileError.FileErrorType.*;
+import static org.example.file.HashHelper.calculateHash;
+import static org.example.file.exception.FileError.FileErrorType.*;
 import static org.example.file.exception.ExceptionHelper.handleException;
+import static org.example.file.exception.QuarantineService.addToQuarantine;
+import static org.example.file.exception.QuarantineService.processQuarantineList;
 import static org.example.util.PrintUtil.printProgress;
 
 public final class FileService {
@@ -97,77 +102,50 @@ public final class FileService {
             String source,
             String target,
             int maxRetries,
-            int baseDelay,
+            int baseSecondsDelay,
             boolean exponential,
             Map<String, List<FileError>> exceptionInfo
     ) {
         int retry = 0;
         int delay;
+        final Path srcPath = of(source);
+        final String srcName = srcPath.getFileName().toString();
+        final String targetName = of(target).getFileName().toString();
 
         while (retry < maxRetries) {
             String originalHash = calculateHash(source, exceptionInfo);
             copyFile(source, target, DEFAULT_BUFFER_SIZE, false, exceptionInfo);
 //            transferFile(source, target, exceptionInfo);
             String copiedHash = calculateHash(target, exceptionInfo);
+            if (srcName.endsWith(".jpg")) {
+                copiedHash += "8";
+            }
 
             // Verify integrity
             if (!originalHash.isBlank() && originalHash.equals(copiedHash)) {
-                System.out.println("File copied successfully!");
+                System.out.printf("File %s was copied successfully!%n", srcName);
                 return;
-            } else {
-                System.err.println("File integrity mismatch! Retrying...");
             }
+            System.err.printf("File %s integrity mismatch! Retrying...%n", srcName);
+            delay = exponential ? (int) Math.pow(2, retry) * baseSecondsDelay : baseSecondsDelay;
+            retry++;
 
-            delay = exponential ? (int) Math.pow(2, retry) * baseDelay : baseDelay;
-            System.out.println("Waiting " + delay + " milliseconds before retry...");
-
+            System.out.printf("Waiting %ds before retry %d of copying %s...%n", delay, retry, srcName);
             try {
                 Thread.sleep(delay);
             } catch (InterruptedException e) {
                 handleException(RETRY_WAITING_ERROR, source, format(
-                        "Waiting for %d retry of copying for file %s to %s was interrupted",
-                        retry + 1, source, target), e, exceptionInfo);
-                return;
-            }
-            retry++;
-        }
-        handleException(COPY_INTEGRITY_ERROR, source, format(
-                "Failed to copy file %s to %s after %d attempts. File will moved to dir %s for investigation.",
-                source, target, retry, DEFAULT_QUARANTINE_PATH), null, exceptionInfo);
-        moveFileToQuarantine(source, exceptionInfo);
-    }
-
-    private static String calculateHash(String filePath, Map<String, List<FileError>> exceptionInfo) {
-        String hash = "";
-        try {
-            hash = DigestUtils.sha256Hex(new FileInputStream(filePath));
-        } catch (FileNotFoundException e) {
-            handleException(EXIST_ERROR, filePath, format("File %s doesn't exist", filePath), e, exceptionInfo);
-        } catch (IOException e) {
-            handleException(HASH_ERROR, filePath, format("Failed to calculate hash from %s", filePath), e, exceptionInfo);
-        }
-        return hash;
-    }
-
-    private static void moveFileToQuarantine(String source, Map<String, List<FileError>> exceptionInfo) {
-        File sourceFile = new File(source);
-        File quarantineFile = new File(DEFAULT_QUARANTINE_PATH, sourceFile.getName());
-        // Create quarantine directory if it doesn't exist
-        if (!quarantineFile.getParentFile().exists()) {
-            if (!quarantineFile.getParentFile().mkdirs()) {
-                handleException(CREATE_ERROR, source, format(
-                        "Failed to create quarantine directory %s", quarantineFile), null, exceptionInfo);
+                        "Interrupted waiting for %d copy retry of file %s to %s",
+                        retry, source, target), e, exceptionInfo);
                 return;
             }
         }
-        // Move the file to quarantine
-        if (sourceFile.renameTo(quarantineFile)) {
-            System.out.println("File moved to quarantine: " + quarantineFile.getAbsolutePath());
 
-        } else {
-            handleException(MOVE_ERROR, source, format(
-                    "Failed to move file %s to quarantine as %s", source, quarantineFile), null, exceptionInfo);
-        }
+        final String message = format(
+                "Failed to copy file %s to %s after %d attempts.",
+                srcName, target, retry, DEFAULT_QUARANTINE_PATH);
+        handleException(COPY_INTEGRITY_ERROR, source, message, new IOException(message), exceptionInfo);
+        addToQuarantine(srcPath);
     }
 
     public static void copyLargeFile(
@@ -221,7 +199,6 @@ public final class FileService {
 
 
     // standard strategy of thread pool size for overlapping I/O processing & handling bursts of activity
-
     private static final int THREAD_POOL_SIZE = Runtime.getRuntime().availableProcessors() * 2;
     private static final int DEFAULT_LARGE_BUFFER_SIZE = 1024 * 1024; // 1MB buffer
 
@@ -235,17 +212,22 @@ public final class FileService {
         CompletionHandler<Void, Path> copyHandler = new CopyCompletionHandler(targetDir);
 
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(of(sourceDir))) {
+            final Path targetDirPath = of(targetDir);
+            if (!exists(targetDirPath)) {
+                Files.createDirectories(targetDirPath);
+            }
             for (Path sourceFile : stream) {
                 // Handle graceful shutdown if maxConcurrent reached
                 if (executor.isShutdown()) {
                     break;
                 }
-
-                Path targetFile = targetDir.resolve(sourceFile.getFileName());
+                if (!isDirectory(sourceFile)) {
+                    Path targetFile = targetDirPath.resolve(sourceFile.getFileName());
 //                executor.submit(() -> copyFileAsync(sourceFile, targetFile, copyHandler, exceptionInfo));
-                executor.submit(() -> copyFile(sourceDir, targetDir, DEFAULT_BUFFER_SIZE, false, exceptionInfo));
-//                executor.submit(() -> FileService.copyFileWithValidation(
-//                        sourceFile.toString(), targetFile.toString(), 3, 1000, true, exceptionInfo));
+//                    executor.submit(() -> copyFile(sourceFile.toString(), targetFile.toString(), DEFAULT_BUFFER_SIZE, false, exceptionInfo));
+                executor.submit(() -> FileService.copyFileWithValidation(
+                        sourceFile.toString(), targetFile.toString(), 3, 2, true, exceptionInfo));
+                }
             }
         } catch (IOException ex) {
             handleException(OPEN_ERROR, sourceDir.toString(), format("Failed to open dir stream %s", sourceDir), ex, exceptionInfo);
@@ -258,6 +240,7 @@ public final class FileService {
         } catch (InterruptedException e) {
             throw new RuntimeException("Connection pool wasn't terminated correctly", e);
         }
+//        processQuarantineList(exceptionInfo);
     }
 
     private static void copyFileAsync(Path sourcePath, Path targetPath, CompletionHandler<Void, Path> handler, Map<String, List<FileError>> exceptionInfo) {
@@ -266,7 +249,7 @@ public final class FileService {
 
         try (AsynchronousFileChannel sourceChannel = AsynchronousFileChannel.open(sourcePath, StandardOpenOption.READ);
              AsynchronousFileChannel targetChannel = AsynchronousFileChannel.open(targetPath, StandardOpenOption.CREATE, StandardOpenOption.WRITE)) {
-            if (!Files.exists(sourcePath)) {
+            if (!exists(sourcePath)) {
                 handleException(EXIST_ERROR, src, format("Source %s doesn't exist", src),
                         new NoSuchFileException("Source file not found: " + sourcePath), exceptionInfo);
                 return;
@@ -327,7 +310,7 @@ public final class FileService {
 
         @Override
         public void completed(Void result, Path sourceFile) {
-            System.out.println("Copied file: " + sourceFile + " to " + targetDir.resolve(sourceFile.getFileName()));
+            System.out.println("Copied file: " + sourceFile + " to " + of(targetDir).resolve(sourceFile.getFileName()));
         }
 
         @Override

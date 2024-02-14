@@ -1,5 +1,7 @@
 package org.example.file;
 
+import org.example.file.exception.FileError;
+
 import java.util.List;
 import java.util.Map;
 

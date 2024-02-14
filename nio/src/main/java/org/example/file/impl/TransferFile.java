@@ -1,8 +1,7 @@
 package org.example.file.impl;
 
 import org.example.file.CopyAction;
-import org.example.file.FileError;
-import org.example.file.FileService;
+import org.example.file.exception.FileError;
 
 import java.util.List;
 import java.util.Map;

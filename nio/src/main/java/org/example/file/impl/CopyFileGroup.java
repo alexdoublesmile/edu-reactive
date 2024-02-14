@@ -1,25 +1,13 @@
 package org.example.file.impl;
 
 import org.example.file.CopyAction;
-import org.example.file.FileError;
-import org.example.file.FileService;
+import org.example.file.exception.FileError;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.AsynchronousFileChannel;
-import java.nio.channels.CompletionHandler;
-import java.nio.file.*;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 import static java.lang.String.format;
 import static java.time.Instant.now;
-import static org.example.file.FileError.FileErrorType.COPY_ERROR;
-import static org.example.file.FileError.FileErrorType.EXIST_ERROR;
 
 public class CopyFileGroup implements CopyAction {
     @Override
