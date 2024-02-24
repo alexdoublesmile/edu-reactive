@@ -9,7 +9,20 @@ import static java.util.concurrent.TimeUnit.MICROSECONDS;
 
 public final class Benchmark {
     private static final TimeUnit DEFAULT_TIME_UNIT = MICROSECONDS;
-    public static void measure(Operation operation) throws Exception {
+
+    public static long measure(Runnable runnable) {
+        long startTime = System.nanoTime();
+        long elapsedTime;
+        try {
+            runnable.run();
+        } finally {
+            long endTime = System.nanoTime();
+            elapsedTime = (endTime - startTime) / getTimeUnitDivider(DEFAULT_TIME_UNIT);
+        }
+        return elapsedTime;
+    }
+
+    public static void measure(Operation operation) {
         long startTime = System.nanoTime();
         try {
             operation.run();
