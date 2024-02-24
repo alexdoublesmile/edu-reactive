@@ -1,20 +1,20 @@
 package org.example;
 
-import org.example.file.FileService;
 import org.example.file.exception.FileError;
+import org.example.server.SimpleServer;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.example.util.FileConstants.RESOURCE_PATH;
-
 public class Launcher {
-    public static void main(String[] args) {
-        final HashMap<String, List<FileError>> exceptionInfo = new HashMap<>();
-
-        FileService.copyFilesAsync(RESOURCE_PATH, RESOURCE_PATH + "/dest", exceptionInfo, 0);
-        printExceptions(exceptionInfo);
+    public static void main(String[] args) throws IOException {
+//        final HashMap<String, List<FileError>> exceptionInfo = new HashMap<>();
+//
+//        FileService.copyFilesAsync(RESOURCE_PATH, RESOURCE_PATH + "/dest", exceptionInfo, 0);
+//        printExceptions(exceptionInfo);
+        new SimpleServer(8020).start();
     }
 
     private static void printExceptions(HashMap<String, List<FileError>> exceptions) {
