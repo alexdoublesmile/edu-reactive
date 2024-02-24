@@ -19,7 +19,7 @@ public class FileError {
                 "- type=" + type +
                 "\n- timestamp=" + timestamp +
                 "\n- message='" + message +
-                '\n';
+                '\n';w
     }
 
     public enum FileErrorType {
