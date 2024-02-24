@@ -1,4 +1,4 @@
-package org.example.file;
+package org.example.util;
 
 public final class FileConstants {
     public static final String RESOURCE_PATH = "nio/src/main/resources/";

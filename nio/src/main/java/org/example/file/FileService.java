@@ -1,11 +1,7 @@
 package org.example.file;
 
-import org.apache.commons.codec.digest.DigestUtils;
-import org.example.file.exception.FileError;
-import org.example.file.exception.QuarantineService;
+import org.example.exception.FileError;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
@@ -26,13 +22,12 @@ import static java.nio.file.Files.exists;
 import static java.nio.file.Files.isDirectory;
 import static java.nio.file.Path.of;
 import static java.nio.file.StandardOpenOption.*;
-import static org.example.file.FileConstants.DEFAULT_BUFFER_SIZE;
-import static org.example.file.FileConstants.DEFAULT_QUARANTINE_PATH;
-import static org.example.file.HashHelper.calculateHash;
-import static org.example.file.exception.FileError.FileErrorType.*;
-import static org.example.file.exception.ExceptionHelper.handleException;
-import static org.example.file.exception.QuarantineService.addToQuarantine;
-import static org.example.file.exception.QuarantineService.processQuarantineList;
+import static org.example.util.FileConstants.DEFAULT_BUFFER_SIZE;
+import static org.example.util.FileConstants.DEFAULT_QUARANTINE_PATH;
+import static org.example.util.HashHelper.getFileHash;
+import static org.example.exception.ExceptionHelper.handleException;
+import static org.example.exception.FileError.FileErrorType.*;
+import static org.example.exception.QuarantineService.addToQuarantine;
 import static org.example.util.PrintUtil.printProgress;
 
 public final class FileService {
@@ -113,13 +108,14 @@ public final class FileService {
         final String targetName = of(target).getFileName().toString();
 
         while (retry < maxRetries) {
-            String originalHash = calculateHash(source, exceptionInfo);
+            String originalHash = getFileHash(source, exceptionInfo);
             copyFile(source, target, DEFAULT_BUFFER_SIZE, false, exceptionInfo);
 //            transferFile(source, target, exceptionInfo);
-            String copiedHash = calculateHash(target, exceptionInfo);
-            if (srcName.endsWith(".jpg")) {
-                copiedHash += "8";
-            }
+            String copiedHash = getFileHash(target, exceptionInfo);
+            // for debug only
+//            if (srcName.endsWith(".jpg")) {
+//                copiedHash += "8";
+//            }
 
             // Verify integrity
             if (!originalHash.isBlank() && originalHash.equals(copiedHash)) {
@@ -142,7 +138,7 @@ public final class FileService {
         }
 
         final String message = format(
-                "Failed to copy file %s to %s after %d attempts.",
+                "Failed to copy file %s to %s after %d attempts. Moving file to Quarantine for investigations: %s",
                 srcName, target, retry, DEFAULT_QUARANTINE_PATH);
         handleException(COPY_INTEGRITY_ERROR, source, message, new IOException(message), exceptionInfo);
         addToQuarantine(srcPath);
@@ -206,7 +202,7 @@ public final class FileService {
             String sourceDir,
             String targetDir,
             Map<String, List<FileError>> exceptionInfo,
-            int maxConcurrent
+            int maxConcurrent // sometimes it could be useful
     ) {
         ExecutorService executor = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
         CompletionHandler<Void, Path> copyHandler = new CopyCompletionHandler(targetDir);
@@ -319,4 +315,90 @@ public final class FileService {
             // Handle errors more comprehensively (e.g., retry, move to error directory)
         }
     }
+
+
+
+//    public static void copyFilesByLessThreads(String sourceDir, String targetDir, int bufferSize) throws IOException {
+//        // Use a selector for non-blocking I/O
+//        Selector selector = Selector.open();
+//
+//        // Map of source files to their corresponding target channels
+//        Map<String, FileChannel> targetChannels = new HashMap<>();
+//
+//        // Open target channels for all files in the target directory
+//        for (String file : Files.list(of(targetDir))) {
+//            String targetPath = Paths.get(targetDir, file).toString();
+//            FileChannel targetChannel = FileChannel.open(Paths.get(targetPath), CREATE, WRITE);
+//            targetChannels.put(file, targetChannel);
+//            targetChannel.register(selector, SelectionKey.OP_WRITE);
+//        }
+//
+//        // Loop through source files and register them for reading
+//        for (String file : Files.list(Paths.get(sourceDir))) {
+//            String sourcePath = Paths.get(sourceDir, file).toString();
+//            FileChannel sourceChannel = FileChannel.open(Paths.get(sourcePath), READ);
+//            sourceChannel.register(selector, SelectionKey.OP_READ);
+//        }
+//
+//        // Main loop for handling I/O operations
+//        while (true) {
+//            int selected = selector.select();
+//            if (selected == 0) {
+//                continue; // No keys ready, wait for events
+//            }
+//
+//            Set<SelectionKey> selectedKeys = selector.selectedKeys();
+//            Iterator<SelectionKey> it = selectedKeys.iterator();
+//
+//            while (it.hasNext()) {
+//                SelectionKey key = it.next();
+//                it.remove();
+//
+//                if (key.isReadable()) {
+//                    handleRead(key);
+//                } else if (key.isWritable()) {
+//                    handleWrite(key, targetChannels);
+//                }
+//            }
+//        }
+//
+//        // Close all channels and selector
+//        for (FileChannel channel : targetChannels.values()) {
+//            channel.close();
+//        }
+//        selector.close();
+//    }
+//
+//    private static void handleRead(SelectionKey key) throws IOException {
+//        FileChannel sourceChannel = (FileChannel) key.channel();
+//        ByteBuffer buffer = ByteBuffer.allocate(DEFAULT_BUFFER_SIZE);
+//        int bytesRead = sourceChannel.read(buffer);
+//
+//        if (bytesRead == -1) {
+//            // Reached end of file, unregister and close channel
+//            key.cancel();
+//            sourceChannel.close();
+//        } else {
+//            buffer.flip();
+//            key.attach(buffer); // Store partially read data for writing
+//            key.interestOps(SelectionKey.OP_WRITE); // Switch to write interest
+//        }
+//    }
+//
+//    private static void handleWrite(SelectionKey key, Map<String, FileChannel> targetChannels) throws IOException {
+//        FileChannel sourceChannel = (FileChannel) key.channel();
+//        ByteBuffer buffer = (ByteBuffer) key.attachment();
+//        String fileName = (String) key.attachment(1); // Store filename for target channel retrieval
+//        FileChannel targetChannel = targetChannels.get(fileName);
+//
+//        int bytesWritten = targetChannel.write(buffer);
+//
+//        if (buffer.hasRemaining()) {
+//            // Buffer not empty, keep writing
+//        } else {
+//            // Buffer empty, clear it and switch to read interest
+//            buffer.clear();
+//            sourceChannel.register(key.selector(), SelectionKey.OP_READ);
+//        }
+//    }
 }

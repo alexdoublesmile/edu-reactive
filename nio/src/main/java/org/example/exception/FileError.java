@@ -1,4 +1,4 @@
-package org.example.file.exception;
+package org.example.exception;
 
 import lombok.Builder;
 import lombok.Getter;

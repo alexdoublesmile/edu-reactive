@@ -1,7 +1,7 @@
-package org.example.file;
+package org.example.util;
 
 import org.apache.commons.codec.digest.DigestUtils;
-import org.example.file.exception.FileError;
+import org.example.exception.FileError;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -10,13 +10,13 @@ import java.util.List;
 import java.util.Map;
 
 import static java.lang.String.format;
-import static org.example.file.exception.ExceptionHelper.handleException;
-import static org.example.file.exception.FileError.FileErrorType.EXIST_ERROR;
-import static org.example.file.exception.FileError.FileErrorType.HASH_ERROR;
+import static org.example.exception.ExceptionHelper.handleException;
+import static org.example.exception.FileError.FileErrorType.EXIST_ERROR;
+import static org.example.exception.FileError.FileErrorType.HASH_ERROR;
 
 public final class HashHelper {
 
-    public static String calculateHash(String filePath, Map<String, List<FileError>> exceptionInfo) {
+    public static String getFileHash(String filePath, Map<String, List<FileError>> exceptionInfo) {
         String hash = "";
         try {
             hash = DigestUtils.sha256Hex(new FileInputStream(filePath));

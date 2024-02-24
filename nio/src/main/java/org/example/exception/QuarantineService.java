@@ -1,20 +1,15 @@
-package org.example.file.exception;
+package org.example.exception;
 
 import java.io.IOException;
-import java.nio.file.CopyOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 import static java.lang.String.format;
 import static java.nio.file.Path.of;
-import static org.example.file.FileConstants.DEFAULT_QUARANTINE_PATH;
-import static org.example.file.exception.ExceptionHelper.handleException;
-import static org.example.file.exception.FileError.FileErrorType.CREATE_ERROR;
-import static org.example.file.exception.FileError.FileErrorType.MOVE_ERROR;
+import static org.example.util.FileConstants.DEFAULT_QUARANTINE_PATH;
 
 public final class QuarantineService {
     private static final List<Path> quarantineList = new ArrayList<>();
@@ -27,7 +22,7 @@ public final class QuarantineService {
             try {
                 Files.createDirectories(quarantinePath);
             } catch (IOException e) {
-                handleException(CREATE_ERROR, srcPath.toString(), format(
+                ExceptionHelper.handleException(FileError.FileErrorType.CREATE_ERROR, srcPath.toString(), format(
                         "Failed to create quarantine directory %s", quarantinePath), e, exceptionInfo);
                 return;
             }
@@ -37,7 +32,7 @@ public final class QuarantineService {
         try {
             Files.move(srcPath, quarantineFile);
         } catch (IOException e) {
-            handleException(MOVE_ERROR, srcPath.toString(), format(
+            ExceptionHelper.handleException(FileError.FileErrorType.MOVE_ERROR, srcPath.toString(), format(
                     "Failed to move file %s to quarantine as %s", srcPath, quarantineFile), e, exceptionInfo);
         }
     }
