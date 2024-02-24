@@ -1,7 +1,7 @@
 package org.example;
 
 import org.example.file.FileService;
-import org.example.exception.FileError;
+import org.example.file.exception.FileError;
 
 import java.util.HashMap;
 import java.util.List;
@@ -12,7 +12,6 @@ import static org.example.util.FileConstants.RESOURCE_PATH;
 public class Launcher {
     public static void main(String[] args) {
         final HashMap<String, List<FileError>> exceptionInfo = new HashMap<>();
-
 
         FileService.copyFilesAsync(RESOURCE_PATH, RESOURCE_PATH + "/dest", exceptionInfo, 0);
         printExceptions(exceptionInfo);

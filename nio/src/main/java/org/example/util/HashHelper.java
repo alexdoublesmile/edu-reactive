@@ -1,7 +1,7 @@
 package org.example.util;
 
 import org.apache.commons.codec.digest.DigestUtils;
-import org.example.exception.FileError;
+import org.example.file.exception.FileError;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -10,9 +10,9 @@ import java.util.List;
 import java.util.Map;
 
 import static java.lang.String.format;
-import static org.example.exception.ExceptionHelper.handleException;
-import static org.example.exception.FileError.FileErrorType.EXIST_ERROR;
-import static org.example.exception.FileError.FileErrorType.HASH_ERROR;
+import static org.example.file.exception.ExceptionHelper.handleException;
+import static org.example.file.exception.FileError.FileErrorType.EXIST_ERROR;
+import static org.example.file.exception.FileError.FileErrorType.HASH_ERROR;
 
 public final class HashHelper {
 

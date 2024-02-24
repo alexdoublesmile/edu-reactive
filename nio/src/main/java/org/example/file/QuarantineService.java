@@ -1,4 +1,7 @@
-package org.example.exception;
+package org.example.file;
+
+import org.example.file.exception.ExceptionHelper;
+import org.example.file.exception.FileError;
 
 import java.io.IOException;
 import java.nio.file.Files;

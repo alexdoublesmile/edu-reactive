@@ -1,6 +1,6 @@
 package org.example.file;
 
-import org.example.exception.FileError;
+import org.example.file.exception.FileError;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -25,9 +25,9 @@ import static java.nio.file.StandardOpenOption.*;
 import static org.example.util.FileConstants.DEFAULT_BUFFER_SIZE;
 import static org.example.util.FileConstants.DEFAULT_QUARANTINE_PATH;
 import static org.example.util.HashHelper.getFileHash;
-import static org.example.exception.ExceptionHelper.handleException;
-import static org.example.exception.FileError.FileErrorType.*;
-import static org.example.exception.QuarantineService.addToQuarantine;
+import static org.example.file.exception.ExceptionHelper.handleException;
+import static org.example.file.exception.FileError.FileErrorType.*;
+import static org.example.file.QuarantineService.addToQuarantine;
 import static org.example.util.PrintUtil.printProgress;
 
 public final class FileService {
