@@ -8,15 +8,15 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.ReentrantLock;
 
 import static java.lang.Runtime.getRuntime;
+import static java.lang.String.format;
+import static java.nio.ByteBuffer.allocate;
+import static java.nio.channels.SelectionKey.OP_READ;
 import static java.util.concurrent.Executors.newFixedThreadPool;
 
 public class SimpleServer {
@@ -26,20 +26,22 @@ public class SimpleServer {
 
 
     private final int port;
+    private final int bufferSize;
     private ServerSocketChannel serverSocketChannel;
     private Selector selector;
 
-    private ExecutorService connPool;
-    private Set<SocketChannel> activeConnections;
-    private ByteBuffer[] bufferPool;
-    private boolean[] availableBuffers;
-    private AtomicInteger nextBufferIndex;
-    private ThreadLocal<ByteBuffer> currentBuffer;
-    private ReentrantLock shutdownLock;
+    private ExecutorService pool;
+    private Set<SocketChannel> session;
+//    private ByteBuffer[] bufferPool;
+//    private boolean[] availableBuffers;
+//    private AtomicInteger nextBufferIndex;
+//    private ThreadLocal<ByteBuffer> currentBuffer;
+//    private ReentrantLock shutdownLock;
 
     public SimpleServer(int port, int bufferSize, int maxConnections) {
         this.port = port;
-        initServer(port, bufferSize, maxConnections);
+        this.bufferSize = bufferSize;
+        initServer(port, maxConnections);
     }
 
     public SimpleServer(int port, int bufferSize) {
@@ -54,7 +56,7 @@ public class SimpleServer {
         this(DEFAULT_PORT, DEFAULT_BUFFER_SIZE, DEFAULT_MAX_CONNECTIONS);
     }
 
-    private void initServer(int port, int bufferSize, int maxConnections) {
+    private void initServer(int port, int maxConnections) {
         try {
             serverSocketChannel = ServerSocketChannel.open();
             serverSocketChannel.bind(new InetSocketAddress(port));
@@ -66,19 +68,19 @@ public class SimpleServer {
             // Register channel into selector for acceptable keys (IO events)
             serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
 
-            connPool = newFixedThreadPool(getRuntime().availableProcessors() * 2);
-            activeConnections = ConcurrentHashMap.newKeySet();
+            pool = newFixedThreadPool(getRuntime().availableProcessors() * 2);
+            session = ConcurrentHashMap.newKeySet();
 
-            // in huge apps better dynamically resize the pool
-            bufferPool = new ByteBuffer[maxConnections];
-            for (int i = 0; i < maxConnections; i++) {
-                bufferPool[i] = ByteBuffer.allocate(bufferSize);
-            }
-            availableBuffers = new boolean[maxConnections];
-            Arrays.fill(availableBuffers, true); // Initially all buffers available
-            nextBufferIndex = new AtomicInteger(0);
-            currentBuffer = new ThreadLocal<>();
-            shutdownLock = new ReentrantLock();
+            // in huge apps better dynamically resize the pool & check shutdown
+//            bufferPool = new ByteBuffer[maxConnections];
+//            for (int i = 0; i < maxConnections; i++) {
+//                bufferPool[i] = ByteBuffer.allocate(bufferSize);
+//            }
+//            availableBuffers = new boolean[maxConnections];
+//            Arrays.fill(availableBuffers, true); // Initially all buffers available
+//            nextBufferIndex = new AtomicInteger(0);
+//            currentBuffer = new ThreadLocal<>();
+//            shutdownLock = new ReentrantLock();
 
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -120,143 +122,131 @@ public class SimpleServer {
                 throw new RuntimeException(e);
             }
             // Check for shutdown signal
-            if (shutdownLock.isLocked()) {
-                try {
-                    // Graceful shutdown
-                    serverSocketChannel.close();
-                    waitForActiveConnectionsToClose();
-                    processRemainingMessages();
-                    clearBuffers();
-                    connPool.shutdown();
-                    break;
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                } finally {
-                    shutdownLock.unlock();
-                }
-            }
+//            if (shutdownLock.isLocked()) {
+//                try {
+//                    // Graceful shutdown
+//                    serverSocketChannel.close();
+//                    waitForActiveConnectionsToClose();
+//                    processRemainingMessages();
+//                    clearBuffers();
+//                    connPool.shutdown();
+//                    break;
+//                } catch (IOException e) {
+//                    throw new RuntimeException(e);
+//                } finally {
+//                    shutdownLock.unlock();
+//                }
+//            }
         }
     }
 
     private void handleAccept(SelectionKey key) {
-        SocketChannel clientChannel;
+        SocketChannel client;
         SocketAddress remoteAddress = null;
         try {
             // won't block thread if no connection is available because of configureBlocking(false)
-            clientChannel = serverSocketChannel.accept();
-            remoteAddress = clientChannel.getRemoteAddress();
+            client = serverSocketChannel.accept();
+            remoteAddress = client.getRemoteAddress();
             // Non-blocking mode for client
-            clientChannel.configureBlocking(false);
+            client.configureBlocking(false);
 
-            try {
-                // get available buffer and store it in ThreadLocal
-                final int bufferIdx = getNextBufferIndex();
-                currentBuffer.set(bufferPool[bufferIdx]);
+            // allocate separate buffer for each connection
+            client.register(selector, OP_READ, allocate(bufferSize));
+            session.add(client);
+            broadcast("[System]: " + remoteAddress + " connected!");
 
-                // Register client channel into selector for readable keys & buffer idx attach
-                clientChannel.register(selector, SelectionKey.OP_READ, bufferIdx);
-                activeConnections.add(clientChannel);
-                System.out.println("Client connected: " + remoteAddress);
-            } catch (IOException e) {
-                // Buffer exhaustion: close connection and send rejection message (optional)
-                System.err.println("Failed to accept connection due to buffer exhaustion.");
-                closeConnection(clientChannel);
-                // ... (Optional) Send rejection message to client
-            }
+            System.out.println("Client connected: " + remoteAddress);
+//            try {
+            // get available buffer and store it in ThreadLocal
+//                final int bufferIdx = getNextBufferIndex();
+//                currentBuffer.set(bufferPool[bufferIdx]);
+
+            // Register client channel into selector for readable keys & buffer idx attach
+//                clientChannel.register(selector, SelectionKey.OP_READ, bufferIdx);
+//            } catch (IOException e) {
+//                // Buffer exhaustion: close connection and send rejection message (optional)
+//                System.err.println("Failed to accept connection due to buffer exhaustion.");
+//                closeConnection(clientChannel);
+//                // ... (Optional) Send rejection message to client
+//            }
         } catch (IOException e) {
             System.err.println("Failed to connect client: " + remoteAddress);
             closeConnection(key);
         }
     }
 
-    private int getNextBufferIndex() throws IOException {
-        int index = nextBufferIndex.getAndIncrement() % bufferPool.length;
-        // Handle potential buffer exhaustion (reject connection)
-        if (!availableBuffers[index]) {
-            throw new IOException("Buffer pool exhausted"); // Indicate connection rejection
-        }
-        // Handle potential buffer exhaustion (wait connection)
-//        while (!availableBuffers[index]) {
-//            System.err.println("Warning: Buffer pool exhausted, retrying...");
-//            Thread.sleep(100); // Simulate waiting for buffer availability
-//            index = nextBufferIndex.getAndIncrement() % bufferPool.length;
-//        }
-        // Mark buffer as unavailable
-        availableBuffers[index] = false;
-        return index;
-    }
-
     private void handleRead(SelectionKey key) {
         SocketChannel clientChannel;
         SocketAddress remoteAddress = null;
-        String attachmentString = "";
         int bytesRead;
         try {
             clientChannel = (SocketChannel) key.channel();
             remoteAddress = clientChannel.getRemoteAddress();
 
-            // Retrieve buffer from ThreadLocal
-            ByteBuffer buffer = currentBuffer.get();
+//            ByteBuffer buffer = currentBuffer.get();
+            ByteBuffer buffer = (ByteBuffer) key.attachment();
 
             // write data into buffer (read data from channel to buffer)
             bytesRead = clientChannel.read(buffer);
             if (bytesRead > 0) {
                 // Handle received data (e.g., process message)
-                buffer.flip();
-                connPool.submit(() -> handleReceivedMessage(buffer, key, clientChannel));
+                pool.submit(() -> handleReceivedMessage(buffer, clientChannel));
             } else if (bytesRead == -1) {
-                closeConnection(clientChannel, key);
+                closeConnection(key);
             }
         } catch (IOException e) {
             System.err.println("Failed to read from client: " + remoteAddress);
         }
     }
 
-    private void handleReceivedMessage(ByteBuffer buffer, SelectionKey key, SocketChannel clientChannel) {
+    private void handleReceivedMessage(ByteBuffer buffer, SocketChannel clientChannel) {
         try {
+            final SocketAddress remoteAddress = clientChannel.getRemoteAddress();
+            buffer.flip();
             String message = new String(buffer.array(), 0, buffer.limit());
 
             // Process message (e.g., parse data, generate response)
-            System.out.printf("[%s]: %s", clientChannel.getRemoteAddress(), message);
-
-            // ... handle message and send response ...
-            String response = "Server received your message: " + message;
-            buffer.clear();
-            buffer.put(response.getBytes());
-            buffer.flip();
-
-            // Send response to client
-            clientChannel.write(buffer);
-            System.out.println("Sent response to " + clientChannel.getRemoteAddress() + ": " + response);
+            broadcast(format("[%s]: %s", remoteAddress, message));
 
             // Clear buffer for reuse & mark as available
             buffer.clear();
-            int bufferIndex = (int) key.attachment();
-            availableBuffers[bufferIndex] = true;
         } catch (Exception e) {
             // handle potential errors (or send error response to client)
             System.err.println("Error processing message: " + e.getMessage());
         } finally {
-            // Remove buffer from ThreadLocal
-            currentBuffer.remove();
+//            currentBuffer.remove();
         }
     }
 
-    private void closeConnection(SocketChannel clientChannel, SelectionKey key) throws IOException {
-        if (key != null) {
-            closeConnection(key);
-        } else {
-            closeConnection(clientChannel);
-        }
+    private void broadcast(String message) {
+        final byte[] bytes = message.getBytes();
+        final ByteBuffer buffer = allocate(bytes.length);
+        buffer.put(bytes);
+        buffer.flip();
+        session.forEach(client -> {
+            try {
+                client.write(buffer);
+                buffer.flip();
+            } catch (IOException e) {
+                try {
+                    System.err.println("Can't send message to: " + client.getRemoteAddress());
+                } catch (IOException ex) {
+                    System.err.println("No client for send message: " + client);
+                }
+            }
+        });
+        buffer.clear();
     }
 
     private void closeConnection(SelectionKey key) {
         SocketChannel clientChannel = (SocketChannel) key.channel();
         SocketAddress remoteAddress = null;
-        activeConnections.remove(clientChannel);
+        session.remove(clientChannel);
         key.cancel();
         try {
             remoteAddress = clientChannel.getRemoteAddress();
+            broadcast("[System]: " + remoteAddress + " disconnected.");
+
             clientChannel.close();
         } catch (IOException e) {
             System.err.printf("Error closing connection: [%s]", remoteAddress);
@@ -265,50 +255,75 @@ public class SimpleServer {
         System.out.printf("Client disconnected: [%s]", remoteAddress);
     }
 
-    private void closeConnection(SocketChannel clientChannel) {
-        SocketAddress remoteAddress = null;
-        activeConnections.remove(clientChannel);
-        try {
-            remoteAddress = clientChannel.getRemoteAddress();
-            clientChannel.close();
-        } catch (IOException e) {
-            System.err.printf("Error closing connection: [%s]", remoteAddress);
-            throw new RuntimeException(e);
-        }
-        System.out.printf("Client disconnected: [%s]", remoteAddress);
-    }
+//    private void closeConnection(SocketChannel clientChannel, SelectionKey key) throws IOException {
+//        if (key != null) {
+//            closeConnection(key);
+//        } else {
+//            closeConnection(clientChannel);
+//        }
+//    }
+//
+//    private void closeConnection(SocketChannel clientChannel) {
+//        SocketAddress remoteAddress = null;
+//        session.remove(clientChannel);
+//        try {
+//            remoteAddress = clientChannel.getRemoteAddress();
+//            clientChannel.close();
+//        } catch (IOException e) {
+//            System.err.printf("Error closing connection: [%s]", remoteAddress);
+//            throw new RuntimeException(e);
+//        }
+//        System.out.printf("Client disconnected: [%s]", remoteAddress);
+//    }
 
-    private void waitForActiveConnectionsToClose() {
-        // Wait for all active connections to finish
-        while (!activeConnections.isEmpty()) {
-            Iterator<SocketChannel> iterator = activeConnections.iterator();
-            while (iterator.hasNext()) {
-                SocketChannel channel = iterator.next();
-                if (!channel.isOpen()) {
-                    iterator.remove();
-                }
-            }
-            try {
-                Thread.sleep(100); // Check periodically for closed connections
-            } catch (InterruptedException e) {
-                // Handle interruption (e.g., shutdown signal)
-                break;
-            }
-        }
-    }
+//    private void waitForActiveConnectionsToClose() {
+//        // Wait for all active connections to finish
+//        while (!session.isEmpty()) {
+//            Iterator<SocketChannel> iterator = session.iterator();
+//            while (iterator.hasNext()) {
+//                SocketChannel channel = iterator.next();
+//                if (!channel.isOpen()) {
+//                    iterator.remove();
+//                }
+//            }
+//            try {
+//                Thread.sleep(100); // Check periodically for closed connections
+//            } catch (InterruptedException e) {
+//                // Handle interruption (e.g., shutdown signal)
+//                break;
+//            }
+//        }
+//    }
+//
+//    private void processRemainingMessages() {
+//        // ... (Optional) Implement logic to process any remaining messages
+//        // in the queue or buffers if applicable ...
+//    }
 
-    private void processRemainingMessages() {
-        // ... (Optional) Implement logic to process any remaining messages
-        // in the queue or buffers if applicable ...
-    }
+//    private void clearBuffers() {
+//        for (ByteBuffer buffer : bufferPool) {
+//            buffer.clear();
+//        }
+//    }
+//
+//    public void shutdown() {
+//        shutdownLock.lock();
+//    }
 
-    private void clearBuffers() {
-        for (ByteBuffer buffer : bufferPool) {
-            buffer.clear();
-        }
-    }
-
-    public void shutdown() {
-        shutdownLock.lock();
-    }
+//    private int getNextBufferIndex() throws IOException {
+//        int index = nextBufferIndex.getAndIncrement() % bufferPool.length;
+//        // Handle potential buffer exhaustion (reject connection)
+//        if (!availableBuffers[index]) {
+//            throw new IOException("Buffer pool exhausted"); // Indicate connection rejection
+//        }
+//        // Handle potential buffer exhaustion (wait connection)
+////        while (!availableBuffers[index]) {
+////            System.err.println("Warning: Buffer pool exhausted, retrying...");
+////            Thread.sleep(100); // Simulate waiting for buffer availability
+////            index = nextBufferIndex.getAndIncrement() % bufferPool.length;
+////        }
+//        // Mark buffer as unavailable
+//        availableBuffers[index] = false;
+//        return index;
+//    }
 }
