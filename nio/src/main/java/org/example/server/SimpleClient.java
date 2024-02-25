@@ -6,78 +6,98 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
-import java.nio.charset.StandardCharsets;
-import java.util.Iterator;
 import java.util.Scanner;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 
-// TODO: 24.02.2024 need to rewrite
+import static java.nio.channels.SelectionKey.OP_CONNECT;
+import static java.nio.channels.SelectionKey.OP_WRITE;
+
 public class SimpleClient {
-    private static final String HOST = "localhost";
-    private static final int PORT = 8020;
+    private static final String DEFAULT_HOST = "localhost";
+    private static final int DEFAULT_PORT = 8080;
+    private ByteBuffer buffer = ByteBuffer.allocate(1024);
 
-    public static void main(String[] args) throws IOException {
+    private final String host;
+    private final int port;
+
+    public SimpleClient(String host, int port) {
+        this.host = host;
+        this.port = port;
+        initClient();
+    }
+
+    public SimpleClient(int port) {
+        this(DEFAULT_HOST, port);
+    }
+
+    public SimpleClient(String host) {
+        this(host, DEFAULT_PORT);
+    }
+
+    public SimpleClient() {
+        this(DEFAULT_HOST, DEFAULT_PORT);
+    }
+
+    private void initClient() {
+
+    }
+
+    public void run() throws IOException {
         SocketChannel channel = SocketChannel.open();
         channel.configureBlocking(false);
-        channel.connect(new InetSocketAddress(HOST, PORT));
 
         Selector selector = Selector.open();
-        channel.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+        channel.register(selector, OP_CONNECT);
+        channel.connect(new InetSocketAddress(host, port));
+        final BlockingQueue<String> queue = new ArrayBlockingQueue<>(2);
 
-        Scanner scanner = new Scanner(System.in);
+        new Thread(() -> {
+            Scanner scanner = new Scanner(System.in);
+            while (true) {
+                final String line = scanner.nextLine();
+                if ("q".equals(line)) {
+                    System.exit(0);
+                }
+                try {
+                    queue.put(line);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                final SelectionKey key = channel.keyFor(selector);
+                key.interestOps(OP_WRITE);
+                selector.wakeup();
+            }
+        }).start();
 
-        while (true) {
+        while (channel.isOpen()) {
             int selected = selector.select();
-
-//            if (selected > 0) {
-                Iterator<SelectionKey> iterator = selector.selectedKeys().iterator();
-
-                while (iterator.hasNext()) {
-                    SelectionKey key = iterator.next();
-                    iterator.remove();
-
-                    if (key.isReadable()) {
-                        handleRead(key);
+            if (selected > 0) {
+                for (SelectionKey key : selector.selectedKeys()) {
+                    if (key.isConnectable()) {
+                        channel.finishConnect();
+                        key.interestOps(OP_WRITE);
+                    } else if (key.isReadable()) {
+                        buffer.clear();
+                        channel.read(buffer);
+                        System.out.println("Received: " + new String(buffer.array()));
                     } else if (key.isWritable()) {
-                        handleWrite(key, scanner);
+                        final String line = queue.poll();
+                        if (line != null) {
+                            channel.write(ByteBuffer.wrap(line.getBytes()));
+                        }
+                        key.interestOps(SelectionKey.OP_READ);
                     }
                 }
-//            }
-
-
-        }
-    }
-
-    private static void handleRead(SelectionKey key) throws IOException {
-        SocketChannel channel = (SocketChannel) key.channel();
-        ByteBuffer buffer = ByteBuffer.allocate(1024);
-        int bytesRead = channel.read(buffer);
-
-        if (bytesRead > 0) {
-            buffer.flip();
-            String message = new String(buffer.array(), 0, bytesRead, StandardCharsets.UTF_8);
-            System.out.println("Received message from server: " + message);
-        } else if (bytesRead == -1) {
-            // Server closed connection
-            System.out.println("Server closed connection.");
-            key.channel().close();
-            System.exit(0);
-        }
-    }
-
-    private static void handleWrite(SelectionKey key, Scanner scanner) throws IOException {
-        SocketChannel channel = (SocketChannel) key.channel();
-        ByteBuffer buffer = ByteBuffer.allocate(1024);
-
-        if (scanner.hasNextLine()) {
-            String message = scanner.nextLine();
-            buffer.put(message.getBytes(StandardCharsets.UTF_8));
-            buffer.flip();
-
-            // Ensure channel is ready for writing before attempting
-            if (channel.write(buffer) == 0) {
-                // Channel not ready, register for OP_WRITE event
-                key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
             }
+        }
+    }
+
+    public static void main(String[] args) {
+        try {
+            new SimpleClient(8020).run();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 }

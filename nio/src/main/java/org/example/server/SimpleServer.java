@@ -326,4 +326,9 @@ public class SimpleServer {
 //        availableBuffers[index] = false;
 //        return index;
 //    }
+
+
+    public static void main(String[] args) {
+        new SimpleServer(8020).start();
+    }
 }
