@@ -91,7 +91,7 @@ public class SimpleServer {
         System.out.println("Server listening on port: " + port);
 
         // Instead of while(true) for better clarity and graceful shutdown
-        while (serverSocketChannel.isOpen()) {
+        while (serverSocketChannel != null && serverSocketChannel.isOpen()) {
             int selected = 0;
             try {
                 // wait for client connection (the only blocking operation)
