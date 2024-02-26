@@ -21,6 +21,7 @@ import static java.nio.channels.SelectionKey.OP_READ;
 import static java.util.concurrent.Executors.newFixedThreadPool;
 
 public class SimpleServer {
+    public static final String EXIT_CODE = "q";
     private static final int DEFAULT_PORT = 8020;
     private static final int DEFAULT_MAX_CONNECTIONS = 1000;
     private static final int DEFAULT_BUFFER_SIZE = 8 * 1024;
@@ -155,20 +156,18 @@ public class SimpleServer {
     }
 
     private void readData(SelectionKey eventKey) {
-        SocketChannel clientChannel;
         SocketAddress remoteAddress = null;
-        int bytesRead;
         try {
-            clientChannel = (SocketChannel) eventKey.channel();
+            final SocketChannel clientChannel = (SocketChannel) eventKey.channel();
             remoteAddress = clientChannel.getRemoteAddress();
 
             ByteBuffer buffer = clientBufferMap.get(clientChannel);
 
             // write data into buffer (read data from channel to buffer)
-            bytesRead = clientChannel.read(buffer);
+            final int bytesRead = clientChannel.read(buffer);
             if (bytesRead > 0) {
                 // Handle received data (e.g., process message)
-                threadPool.submit(() -> processData(buffer.flip(), clientChannel));
+                threadPool.submit(() -> processData(buffer.flip(), eventKey));
             } else if (bytesRead == -1) {
                 closeConnection(eventKey);
             }
@@ -177,16 +176,19 @@ public class SimpleServer {
         }
     }
 
-    private void processData(ByteBuffer dataBuffer, SocketChannel clientChannel) {
+    private void processData(ByteBuffer dataBuffer, SelectionKey eventKey) {
         try {
+            SocketChannel clientChannel = (SocketChannel) eventKey.channel();
             final SocketAddress clientName = clientChannel.getRemoteAddress();
             String message = new String(dataBuffer.array(), 0, dataBuffer.limit());
-
-            // Process message (e.g., parse data, generate response)
-            broadcast(format("[%s]: %s", clientName, message));
-
-            // Clear buffer for reuse & mark as available
-            dataBuffer.clear();
+            if (message.equals(EXIT_CODE)) {
+                closeConnection(eventKey);
+            } else {
+                // Process message (e.g., parse data, generate response)
+                broadcast(format("[%s]: %s", clientName, message));
+                // Clear buffer for reuse & mark as available
+                dataBuffer.clear();
+            }
         } catch (Exception e) {
             // handle potential errors (or send error response to client)
             System.err.println("Error processing message: " + e.getMessage());

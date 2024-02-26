@@ -6,12 +6,14 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
+import java.util.Iterator;
 import java.util.Scanner;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
 import static java.nio.channels.SelectionKey.OP_CONNECT;
 import static java.nio.channels.SelectionKey.OP_WRITE;
+import static org.example.server.SimpleServer.EXIT_CODE;
 
 public class SimpleClient {
     private static final String DEFAULT_HOST = "localhost";
@@ -56,9 +58,6 @@ public class SimpleClient {
             Scanner scanner = new Scanner(System.in);
             while (true) {
                 final String line = scanner.nextLine();
-                if ("q".equals(line)) {
-                    System.exit(0);
-                }
                 try {
                     queue.put(line);
                 } catch (InterruptedException e) {
@@ -73,18 +72,28 @@ public class SimpleClient {
         while (channel.isOpen()) {
             int selected = selector.select();
             if (selected > 0) {
-                for (SelectionKey key : selector.selectedKeys()) {
+                Iterator<SelectionKey> keyIterator = selector.selectedKeys().iterator();
+
+                while (keyIterator.hasNext()) {
+                    SelectionKey key = keyIterator.next();
+                    keyIterator.remove();
                     if (key.isConnectable()) {
                         channel.finishConnect();
                         key.interestOps(OP_WRITE);
                     } else if (key.isReadable()) {
-                        buffer.clear();
+//                        buffer.clear();
                         channel.read(buffer);
-                        System.out.println("Received: " + new String(buffer.array()));
+                        buffer.flip();
+                        String message = new String(buffer.array(), 0, buffer.limit());
+                        System.out.println(message);
+                        buffer.clear();
                     } else if (key.isWritable()) {
                         final String line = queue.poll();
                         if (line != null) {
                             channel.write(ByteBuffer.wrap(line.getBytes()));
+                            if (line.equals(EXIT_CODE)) {
+                                System.exit(0);
+                            }
                         }
                         key.interestOps(SelectionKey.OP_READ);
                     }
