@@ -11,6 +11,7 @@
     <modules>
         <module>nio</module>
         <module>rx</module>
+        <module>reactor</module>
     </modules>
 
     <properties>
