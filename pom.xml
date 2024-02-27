@@ -10,6 +10,7 @@
     <packaging>pom</packaging>
     <modules>
         <module>nio</module>
+        <module>rx</module>
     </modules>
 
     <properties>
