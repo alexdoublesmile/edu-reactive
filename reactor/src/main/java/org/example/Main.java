@@ -1,12 +1,15 @@
 package org.example;
 
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
 public class Main {
     public static void main(String[] args) throws InterruptedException {
         //////////////  Mono & Flux fabrics ///////////////////////////////
 //        Mono.empty();
 //        Mono.never();
 //        Mono.error();
-//        Mono.just();
+        final Mono<Object> samPublisher = Mono.just("Sam");
 //
 //        Mono.create();
 //        Mono.from();
@@ -20,9 +23,9 @@ public class Main {
 //        Mono.zip();
         //////////////  Mono only ///////////////////////////////
 //        Mono.justOrEmpty();
+//        Mono.fromCallable();
 
 //        Mono.delay();
-//        Mono.fromCallable();
 //        Mono.fromCompletionStage();
 //        Mono.fromDirect();
 //        Mono.fromFuture();
@@ -38,7 +41,7 @@ public class Main {
 //        Flux.interval(Duration.ofMillis(500)).subscribe(System.out::println);
 //        Flux.fromIterable();
 //        Flux.fromStream();
-//        Flux.fromArray();
+        final Flux<String> stringPublisher = Flux.fromArray(new String[]{"Ann", "Joy"});
 
 //        Flux.generate();
 //        Thread.sleep(5000);
@@ -62,6 +65,9 @@ public class Main {
 
 //        samPublisher.log();
 //        samPublisher.map();
+//        samPublisher.filter();
+//        samPublisher.flatMap();
+//        samPublisher.take();
 //        samPublisher.doOnSubscribe();
 //        samPublisher.doOnRequest();
 //        samPublisher.doOnEach();
@@ -77,7 +83,13 @@ public class Main {
 //        samPublisher.onErrorMap();
 //        samPublisher.onErrorComplete();
 //        samPublisher.onErrorStop();
+//        samPublisher.publish();
+//        samPublisher.publishOn();
+//        samPublisher.subscribeOn();
+//        samPublisher.delayElement();
+//        samPublisher.flux();
 
+//        samPublisher.cancelOn();
 //        samPublisher.hasElement();
 //        samPublisher.toFuture();
 //        samPublisher.and();
@@ -87,14 +99,12 @@ public class Main {
 //        samPublisher.cache();
 //        samPublisher.cacheInvalidateIf();
 //        samPublisher.cacheInvalidateWhen();
-//        samPublisher.cancelOn();
 //        samPublisher.cast();
 //        samPublisher.checkpoint();
 //        samPublisher.concatWith();
 //        samPublisher.contextCapture();
 //        samPublisher.contextWrite();
 //        samPublisher.defaultIfEmpty();
-//        samPublisher.delayElement();
 //        samPublisher.delaySubscription();
 //        samPublisher.delayUntil();
 //        samPublisher.dematerialize();
@@ -104,12 +114,9 @@ public class Main {
 //        samPublisher.elapsed();
 //        samPublisher.expand();
 //        samPublisher.expandDeep();
-//        samPublisher.filter();
 //        samPublisher.filterWhen();
-//        samPublisher.flatMap();
 //        samPublisher.flatMapIterable();
 //        samPublisher.flatMapMany();
-//        samPublisher.flux();
 //        samPublisher.handle();
 //        samPublisher.hide();
 //        samPublisher.ignoreElement();
@@ -121,8 +128,6 @@ public class Main {
 //        samPublisher.ofType();
 //        samPublisher.onTerminateDetach();
 //        samPublisher.or();
-//        samPublisher.publish();
-//        samPublisher.publishOn();
 //        samPublisher.repeat();
 //        samPublisher.repeatWhen();
 //        samPublisher.repeatWhenEmpty();
@@ -131,11 +136,9 @@ public class Main {
 //        samPublisher.share();
 //        samPublisher.single();
 //        samPublisher.singleOptional();
-//        samPublisher.subscribeOn();
 //        samPublisher.subscribeWith();
 //        samPublisher.switchIfEmpty();
 //        samPublisher.tag();
-//        samPublisher.take();
 //        samPublisher.takeUntilOther();
 //        samPublisher.tap();
 //        samPublisher.then();
@@ -151,12 +154,24 @@ public class Main {
 //        samPublisher.zipWhen();
 //        samPublisher.zipWith();
 //
-//        stringPublisher.hasElements();
-//        stringPublisher.getPrefetch();
-//        stringPublisher.toIterable();
-//        stringPublisher.toStream();
+
+//        stringPublisher.delayElements();
+//        stringPublisher.sort();
+//        stringPublisher.distinct();
+//        stringPublisher.skip();
+//        stringPublisher.skipWhile();
+//        stringPublisher.takeWhile();
+//        stringPublisher.reduce();
 //        stringPublisher.all();
 //        stringPublisher.any();
+//        stringPublisher.count();
+//        stringPublisher.toIterable();
+//        stringPublisher.toStream();
+//        stringPublisher.collect();
+//        stringPublisher.parallel();
+
+//        stringPublisher.hasElements();
+//        stringPublisher.getPrefetch();
 //        stringPublisher.blockFirst();
 //        stringPublisher.blockLast();
 //        stringPublisher.buffer();
@@ -165,7 +180,6 @@ public class Main {
 //        stringPublisher.bufferUntilChanged();
 //        stringPublisher.bufferWhen();
 //        stringPublisher.bufferWhile();
-//        stringPublisher.collect();
 //        stringPublisher.collectList();
 //        stringPublisher.collectMap();
 //        stringPublisher.collectMultimap();
@@ -174,10 +188,7 @@ public class Main {
 //        stringPublisher.concatMapDelayError();
 //        stringPublisher.concatMapIterable();
 //        stringPublisher.concatWithValues();
-//        stringPublisher.count();
-//        stringPublisher.delayElements();
 //        stringPublisher.delaySequence();
-//        stringPublisher.distinct();
 //        stringPublisher.distinctUntilChanged();
 //        stringPublisher.doOnComplete();
 //        stringPublisher.elementAt();
@@ -200,9 +211,7 @@ public class Main {
 //        stringPublisher.onBackpressureError();
 //        stringPublisher.onBackpressureLatest();
 //        stringPublisher.onErrorMap();
-//        stringPublisher.parallel();
 //        stringPublisher.publishNext();
-//        stringPublisher.reduce();
 //        stringPublisher.reduceWith();
 //        stringPublisher.replay();
 //        stringPublisher.sample();
@@ -212,18 +221,14 @@ public class Main {
 //        stringPublisher.scanWith();
 //        stringPublisher.shareNext();
 //        stringPublisher.singleOrEmpty();
-//        stringPublisher.skip();
 //        stringPublisher.skipLast();
 //        stringPublisher.skipUntil();
 //        stringPublisher.skipUntilOther();
-//        stringPublisher.skipWhile();
-//        stringPublisher.sort();
 //        stringPublisher.startWith();
 //        stringPublisher.switchMap();
 //        stringPublisher.switchOnFirst();
 //        stringPublisher.takeLast();
 //        stringPublisher.takeUntil();
-//        stringPublisher.takeWhile();
 //        stringPublisher.window();
 //        stringPublisher.windowTimeout();
 //        stringPublisher.windowUntil();

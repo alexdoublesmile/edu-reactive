@@ -1,9 +1,15 @@
 package org.example;
 
 import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import reactor.test.StepVerifier;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
 
 @Slf4j
 public class MonoTest {
@@ -81,6 +87,22 @@ public class MonoTest {
 
         StepVerifier.create(error)
                 .expectNext(empty)
+                .verifyComplete();
+    }
+
+    @Test
+    public void checkAsyncRequest() {
+        final Mono<List<String>> publisher = Mono.fromCallable(() -> Files.readAllLines(Path.of("test.txt")))
+                .log()
+                .subscribeOn(Schedulers.boundedElastic());
+
+        StepVerifier.create(publisher)
+                .expectSubscription()
+                .thenConsumeWhile(lineList -> {
+                    Assertions.assertFalse(lineList.isEmpty());
+                    log.info("Line list size = {}", lineList.size());
+                    return true;
+                })
                 .verifyComplete();
     }
 }
