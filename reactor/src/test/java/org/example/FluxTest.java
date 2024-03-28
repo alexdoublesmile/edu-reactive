@@ -10,6 +10,7 @@ import reactor.core.scheduler.Schedulers;
 import reactor.test.StepVerifier;
 
 import java.time.Duration;
+import java.util.Objects;
 
 @Slf4j
 public class FluxTest {
@@ -99,5 +100,49 @@ public class FluxTest {
                 .expectSubscription()
                 .expectNext(1, 2, 3, 4)
                 .verifyComplete();
+    }
+
+    @Test
+    public void checkZip() {
+        final Flux<String> animeNameStream = Flux.just("Grand Blue", "Baki");
+        final Flux<String> animeStudioStream = Flux.just("Zero-G", "TS");
+        final Flux<Integer> animeEpisodesStream = Flux.just(12, 24);
+
+        final Flux<Anime> animeFlux = Flux.zip(animeNameStream, animeStudioStream, animeEpisodesStream)
+                .flatMap(tuple -> Flux.just(
+                        new Anime(tuple.getT1(), tuple.getT2(), tuple.getT3())));
+
+        StepVerifier.create(animeFlux)
+                .expectSubscription()
+                .expectNext(
+                        new Anime("Grand Blue", "Zero-G", 12),
+                        new Anime("Baki", "TS", 24)
+                )
+                .verifyComplete();
+    }
+
+    private class Anime {
+        private final String name;
+        private final String studio;
+        private final Integer episodeCount;
+
+        public Anime(String name, String studio, Integer episodeCount) {
+            this.name = name;
+            this.studio = studio;
+            this.episodeCount = episodeCount;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            Anime anime = (Anime) o;
+            return Objects.equals(name, anime.name) && Objects.equals(studio, anime.studio) && Objects.equals(episodeCount, anime.episodeCount);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(name, studio, episodeCount);
+        }
     }
 }

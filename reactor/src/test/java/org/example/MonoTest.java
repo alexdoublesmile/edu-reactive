@@ -10,6 +10,7 @@ import reactor.test.StepVerifier;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Slf4j
 public class MonoTest {
@@ -104,5 +105,22 @@ public class MonoTest {
                     return true;
                 })
                 .verifyComplete();
+    }
+
+    @Test
+    public void checkLazyPublisher() throws InterruptedException {
+        Mono<Long> publisher = Mono.defer(() -> Mono.just(System.currentTimeMillis()));
+
+        publisher.subscribe(l -> log.info("time: {}", l));
+        Thread.sleep(100);
+        publisher.subscribe(l -> log.info("time: {}", l));
+        Thread.sleep(100);
+        publisher.subscribe(l -> log.info("time: {}", l));
+        Thread.sleep(100);
+        publisher.subscribe(l -> log.info("time: {}", l));
+
+        AtomicLong atomicLong = new AtomicLong();
+        publisher.subscribe(atomicLong::set);
+        Assertions.assertTrue(atomicLong.get() > 0);
     }
 }

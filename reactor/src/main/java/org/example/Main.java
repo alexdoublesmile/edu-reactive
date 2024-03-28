@@ -10,27 +10,27 @@ public class Main {
 //        Mono.never();
 //        Mono.error();
         final Mono<Object> samPublisher = Mono.just("Sam");
+//        Mono.defer();
+//        Mono.zip();
 //
 //        Mono.create();
 //        Mono.from();
-//        Mono.defer();
 //        Mono.deferContextual();
 //        Mono.first();
 //        Mono.firstWithSignal();
 //        Mono.firstWithValue();
 //        Mono.using();
 //        Mono.usingWhen();
-//        Mono.zip();
         //////////////  Mono only ///////////////////////////////
 //        Mono.justOrEmpty();
 //        Mono.fromCallable();
 
 //        Mono.delay();
+//        Mono.fromSupplier();
+//        Mono.fromRunnable();
+//        Mono.fromFuture();
 //        Mono.fromCompletionStage();
 //        Mono.fromDirect();
-//        Mono.fromFuture();
-//        Mono.fromRunnable();
-//        Mono.fromSupplier();
 //        Mono.ignoreElements();
 //        Mono.sequenceEqual();
 //        Mono.when();
@@ -45,20 +45,20 @@ public class Main {
 
 //        Flux.generate();
 //        Thread.sleep(5000);
+//        Flux.concat();
+//        Flux.combineLatest();
+//        Flux.concatDelayError();
+//        Flux.merge();
+//        Flux.mergeSequential();
+//        Flux.mergeDelayError();
 
 //        Flux.push();
-//        Flux.combineLatest();
-//        Flux.concat();
-//        Flux.concatDelayError();
 //        Flux.switchOnNext();
-//        Flux.merge();
+//        Flux.mergeOrdered();
 //        Flux.mergeComparing();
 //        Flux.mergeComparingDelayError();
-//        Flux.mergeDelayError();
-//        Flux.mergeOrdered();
 //        Flux.mergePriority();
 //        Flux.mergePriorityDelayError();
-//        Flux.mergeSequential();
 //        Flux.mergeSequentialDelayError();
 
 //  --------------------------------------------
@@ -84,9 +84,13 @@ public class Main {
 //        samPublisher.onErrorComplete();
 //        samPublisher.onErrorStop();
 //        samPublisher.publish();
+//        samPublisher.concatWith();
 //        samPublisher.publishOn();
 //        samPublisher.subscribeOn();
 //        samPublisher.delayElement();
+//        samPublisher.switchIfEmpty();
+//        samPublisher.mergeWith();
+//        samPublisher.zipWith();
 //        samPublisher.flux();
 
 //        samPublisher.cancelOn();
@@ -101,7 +105,6 @@ public class Main {
 //        samPublisher.cacheInvalidateWhen();
 //        samPublisher.cast();
 //        samPublisher.checkpoint();
-//        samPublisher.concatWith();
 //        samPublisher.contextCapture();
 //        samPublisher.contextWrite();
 //        samPublisher.defaultIfEmpty();
@@ -122,7 +125,6 @@ public class Main {
 //        samPublisher.ignoreElement();
 //        samPublisher.mapNotNull();
 //        samPublisher.materialize();
-//        samPublisher.mergeWith();
 //        samPublisher.metrics();
 //        samPublisher.name();
 //        samPublisher.ofType();
@@ -137,7 +139,6 @@ public class Main {
 //        samPublisher.single();
 //        samPublisher.singleOptional();
 //        samPublisher.subscribeWith();
-//        samPublisher.switchIfEmpty();
 //        samPublisher.tag();
 //        samPublisher.takeUntilOther();
 //        samPublisher.tap();
@@ -152,7 +153,6 @@ public class Main {
 //        samPublisher.transformDeferred();
 //        samPublisher.transformDeferredContextual();
 //        samPublisher.zipWhen();
-//        samPublisher.zipWith();
 //
 
 //        stringPublisher.delayElements();
@@ -169,6 +169,7 @@ public class Main {
 //        stringPublisher.toStream();
 //        stringPublisher.collect();
 //        stringPublisher.parallel();
+//        stringPublisher.flatMapSequential();
 
 //        stringPublisher.hasElements();
 //        stringPublisher.getPrefetch();
@@ -193,7 +194,6 @@ public class Main {
 //        stringPublisher.doOnComplete();
 //        stringPublisher.elementAt();
 //        stringPublisher.flatMapDelayError();
-//        stringPublisher.flatMapSequential();
 //        stringPublisher.flatMapSequentialDelayError();
 //        stringPublisher.groupBy();
 //        stringPublisher.groupJoin();
