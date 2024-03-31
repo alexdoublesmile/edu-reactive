@@ -124,6 +124,7 @@ public class AsyncLauncher {
         Mono<List<String>> result = combinations.collectList();
 
         System.out.println("Do other operations while previous line is processing...");
+        // In production, we would continue working with the Flux or Mono
         List<String> results = result.block();
         System.out.println(results);
     }
