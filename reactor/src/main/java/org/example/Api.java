@@ -1,21 +1,18 @@
 package org.example;
 
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
-public class Main {
+public class Api {
     public static void main(String[] args) throws InterruptedException {
         //////////////  Mono & Flux fabrics ///////////////////////////////
 //        Mono.empty();
 //        Mono.never();
 //        Mono.error();
-        final Mono<Object> samPublisher = Mono.just("Sam");
 //        Mono.defer();
-//        Mono.zip();
-//
-//        Mono.create();
-//        Mono.from();
 //        Mono.deferContextual();
+//        Mono.zip();
+//        Mono.create();
+//        final Mono<Object> samPublisher = Mono.just("Sam");
+
+//        Mono.from();
 //        Mono.first();
 //        Mono.firstWithSignal();
 //        Mono.firstWithValue();
@@ -41,7 +38,7 @@ public class Main {
 //        Flux.interval(Duration.ofMillis(500)).subscribe(System.out::println);
 //        Flux.fromIterable();
 //        Flux.fromStream();
-        final Flux<String> stringPublisher = Flux.fromArray(new String[]{"Ann", "Joy"});
+//        final Flux<String> stringPublisher = Flux.fromArray(new String[]{"Ann", "Joy"});
 
 //        Flux.generate();
 //        Thread.sleep(5000);
