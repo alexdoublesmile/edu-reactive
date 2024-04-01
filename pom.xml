@@ -12,7 +12,6 @@
         <module>nio</module>
         <module>rx</module>
         <module>reactor</module>
-        <module>webflux1</module>
     </modules>
 
     <properties>
