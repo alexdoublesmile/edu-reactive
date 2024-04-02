@@ -12,7 +12,7 @@
         <module>nio</module>
         <module>rx</module>
         <module>reactor</module>
-        <module>app</module>
+        <module>webflux</module>
     </modules>
 
     <properties>
